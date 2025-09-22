@@ -5,6 +5,8 @@ An end-to-end playground for incremental learning and lightweight recommendation
 - Online learning with River: stream ratings one-by-one, train a logistic regression model on implicit feedback, and visualize a live ROC curve.
 - Streamlit UI ("FredFlix"): like movies and get simple content-based recommendations. Optionally enrich movies with poster images from TMDB.
 
+[![Interactive Live Demo](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://fredflix.streamlit.app/)
+
 ---
 
 ## Contents
