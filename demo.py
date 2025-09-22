@@ -1,12 +1,10 @@
 import os
-import json
 import html
 import numpy as np
 import pandas as pd
 import streamlit as st
 
 CSV_PATH = os.path.abspath("data/movies_with_posters.csv")
-LIKES_PATH = os.path.abspath("likes.json")
 
 st.set_page_config(page_title="FredFlix", layout="wide")
 
@@ -102,27 +100,6 @@ def load_genres(movies_df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
     return genres_df, genre_names
 
 
-def load_likes(path: str) -> dict:
-    if not os.path.exists(path):
-        return {}
-    try:
-        with open(path, "r") as f:
-            data = json.load(f)
-            if isinstance(data, dict):
-                return {str(k): bool(v) for k, v in data.items() if v}
-            if isinstance(data, list):
-                return {str(x): True for x in data}
-    except Exception as e:
-        st.warning(f"Failed to read likes file '{path}': {e}")
-    return {}
-
-
-def save_likes(path: str, likes: dict) -> None:
-    compact = {str(k): True for k, v in likes.items() if v}
-    with open(path, "w") as f:
-        json.dump(compact, f, indent=2)
-
-
 def show_poster(poster_url: str, title: str) -> None:
     if pd.notna(poster_url) and isinstance(poster_url, str) and poster_url.strip():
         safe_url = html.escape(poster_url, quote=True)
@@ -177,7 +154,11 @@ def compute_recommendations(
 
 movies = load_data(CSV_PATH)
 genres_df, genre_names = load_genres(movies)
-likes_map = load_likes(LIKES_PATH)
+
+if "likes_map" not in st.session_state:
+    st.session_state.likes_map = {}
+
+likes_map = st.session_state.likes_map
 liked_ids = {int(k) for k in likes_map.keys()}
 
 st.sidebar.title("Controls")
@@ -221,8 +202,7 @@ with right:
                         help="Remove",
                         use_container_width=True,
                     ):
-                        likes_map.pop(str(item_id), None)
-                        save_likes(LIKES_PATH, likes_map)
+                        st.session_state.likes_map.pop(str(item_id), None)
                         st.rerun()
 
 with left:
@@ -235,7 +215,6 @@ with left:
             default=[],
             help="Show only movies matching any selected genres",
         )
-
 
     grid_movies = movies
     if selected_genres:
@@ -279,7 +258,7 @@ with left:
         i = 0
         for _, row in page_movies.iterrows():
             item_id = int(row["item_id"])
-            liked = likes_map.get(str(item_id), False)
+            liked = st.session_state.likes_map.get(str(item_id), False)
             with grid_cols[i % cols_count]:
                 poster_url = row.get("poster_url")
                 show_poster(poster_url, row["title"])
@@ -287,10 +266,9 @@ with left:
                 btn_label = "Unlike" if liked else "Like"
                 if st.button(btn_label, key=f"like_btn_{item_id}"):
                     if liked:
-                        likes_map.pop(str(item_id), None)
+                        st.session_state.likes_map.pop(str(item_id), None)
                     else:
-                        likes_map[str(item_id)] = True
-                    save_likes(LIKES_PATH, likes_map)
+                        st.session_state.likes_map[str(item_id)] = True
                     st.rerun()
             i += 1
 
